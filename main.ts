@@ -25,6 +25,13 @@ const srcBytes = readFileSync(source);
 if (!srcBytes.subarray(0, 8).equals(PNG_MAGIC)) {
   throw new Error(`PNG magic-byte guard FAILED: ${source} does not start with 89 50 4E 47 0D 0A 1A 0A`);
 }
+// PNG IEND: the last 12 bytes must be the IEND chunk (length 0, "IEND", CRC
+// AE 42 60 82) — a whole image, not a truncated one (RULES.txt: every PNG chunk
+// with its checksum and the image data its header describes).
+const IEND = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]);
+if (!srcBytes.subarray(srcBytes.length - 12).equals(IEND)) {
+  throw new Error(`IEND trailer guard FAILED: ${source} does not end with a whole PNG IEND chunk`);
+}
 if (srcBytes.length > MAX_BYTES) {
   throw new Error(`size guard FAILED: ${source} is ${srcBytes.length} bytes, over the 1 MiB cap`);
 }
